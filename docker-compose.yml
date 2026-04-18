@@ -1,0 +1,88 @@
+services:
+  p1-main:
+    build: .
+    container_name: p1-main
+    command:
+      - "-name"
+      - "P1"
+      - "-local-host"
+      - "p1-main"
+      - "-local-port"
+      - "1099"
+      - "-mtp"
+      - "jade.mtp.http.MessageTransportProtocol(http://p1-main:7778/acc)"
+      - "restaurante:edu.sma.agents.RestaurantAgent"
+    ports:
+      - "1099:1099"
+      - "7778:7778"
+    networks:
+      - sma-net
+
+  p1-c1:
+    build: .
+    container_name: p1-c1
+    command:
+      - "-container"
+      - "-host"
+      - "p1-main"
+      - "-port"
+      - "1099"
+      - "logistica:edu.sma.agents.LogisticsAgent"
+    depends_on:
+      - p1-main
+    networks:
+      - sma-net
+
+  p1-c2:
+    build: .
+    container_name: p1-c2
+    command:
+      - "-container"
+      - "-host"
+      - "p1-main"
+      - "-port"
+      - "1099"
+      - "supervisor:edu.sma.agents.SupervisorAgent"
+    depends_on:
+      - p1-main
+    networks:
+      - sma-net
+
+  p2-main:
+    build: .
+    container_name: p2-main
+    command:
+      - "-name"
+      - "P2"
+      - "-local-host"
+      - "p2-main"
+      - "-local-port"
+      - "2099"
+      - "-mtp"
+      - "jade.mtp.http.MessageTransportProtocol(http://p2-main:8888/acc)"
+      - "pagos:edu.sma.agents.PaymentAgent"
+    ports:
+      - "2099:2099"
+      - "8888:8888"
+    networks:
+      - sma-net
+
+  p2-c1:
+    build: .
+    container_name: p2-c1
+    command:
+      - "-container"
+      - "-host"
+      - "p2-main"
+      - "-port"
+      - "2099"
+      - "cliente:edu.sma.agents.ClientAgent(http://p1-main:7778/acc,restaurante@P1,logistica@P1,supervisor@P1)"
+    depends_on:
+      - p2-main
+      - p1-main
+    networks:
+      - sma-net
+
+networks:
+  sma-net:
+    driver: bridge

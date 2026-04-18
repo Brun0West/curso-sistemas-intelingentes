@@ -1,0 +1,221 @@
+<h1 id="carátula">CARÁTULA</h1>
+<p><strong>Curso:</strong> [Completar]</p>
+<p><strong>Docente:</strong> [Completar]</p>
+<p><strong>Título del trabajo:</strong> <em>Implementación de un Sistema Multi-Agente Distribuido con JADE para Gestión Colaborativa de Pedidos de Restaurantes</em></p>
+<p><strong>Integrantes:</strong> - [Integrante 1] - [Integrante 2] - [Integrante 3] - [Integrante 4]</p>
+<p><strong>Repositorio GitHub:</strong> <a href="https://github.com/usuario/repositorio">https://github.com/usuario/repositorio</a></p>
+<p><strong>Video YouTube:</strong> <a href="https://youtube.com/...">https://youtube.com/…</a></p>
+<p><strong>Fecha:</strong> 18 de abril de 2026</p>
+<hr />
+<h1 id="introducción">1. Introducción</h1>
+<p>Los sistemas multi-agente constituyen una aproximación robusta para resolver problemas distribuidos, especialmente en escenarios donde múltiples entidades autónomas deben coordinarse en tiempo real. En este trabajo se presenta el diseño e implementación de un sistema distribuido con JADE (Java Agent DEvelopment Framework), desplegado sobre dos plataformas independientes conectadas por red.</p>
+<p>La propuesta modela un proceso de gestión de pedidos en una cadena de restaurantes. Se utilizan mecanismos de descubrimiento de servicios mediante el Directory Facilitator (DF), protocolos de interacción basados en FIPA-ACL y una arquitectura distribuida ejecutada en contenedores Docker. El objetivo central es evidenciar colaboración real entre agentes, intercambio de información útil y generación de resultados integrados en un entorno heterogéneo.</p>
+<h1 id="objetivos">2. Objetivos</h1>
+<h2 id="objetivo-general">2.1 Objetivo general</h2>
+<p>Implementar un sistema multi-agente distribuido en JADE, compuesto por al menos dos plataformas y cinco agentes cooperativos, que resuelva colaborativamente el flujo de un pedido de restaurante mediante comunicación FIPA-ACL y descubrimiento de servicios en DF.</p>
+<h2 id="objetivos-específicos">2.2 Objetivos específicos</h2>
+<ol type="1">
+<li>Diseñar una arquitectura distribuida de dos plataformas JADE (P1 y P2) comunicadas por red.</li>
+<li>Implementar agentes con responsabilidades diferenciadas y lógica de negocio autónoma.</li>
+<li>Registrar y descubrir servicios dinámicamente mediante Directory Facilitator.</li>
+<li>Integrar performativas ACL (<code>CFP</code>, <code>PROPOSE</code>, <code>REQUEST</code>, <code>INFORM</code>, <code>CONFIRM</code>, <code>FAILURE</code>) en el flujo de colaboración.</li>
+<li>Validar la ejecución en Docker y documentar resultados con evidencia técnica.</li>
+</ol>
+<h1 id="descripción-de-la-propuesta-de-solución">3. Descripción de la propuesta de solución</h1>
+<h2 id="problema-abordado">3.1 Problema abordado</h2>
+<p>Se requiere coordinar actores distribuidos para gestionar un pedido completo: cotización, planificación de entrega, validación de pago y supervisión global del proceso, evitando acoplamiento rígido entre componentes.</p>
+<h2 id="propuesta-implementada">3.2 Propuesta implementada</h2>
+<p>Se implementó un SMA distribuido para gestión de pedidos:</p>
+<ul>
+<li><strong>Plataforma P1</strong>
+<ul>
+<li><code>restaurante@P1</code>: genera oferta de menú (precio + tiempo de preparación).</li>
+<li><code>logistica@P1</code>: calcula ruta, costo y tiempo estimado de entrega.</li>
+<li><code>supervisor@P1</code>: monitorea mensajes y genera reporte periódico.</li>
+</ul></li>
+<li><strong>Plataforma P2</strong>
+<ul>
+<li><code>cliente@P2</code>: inicia y coordina el ciclo de pedido.</li>
+<li><code>pagos@P2</code>: valida transacción de pago y responde aprobación/rechazo.</li>
+</ul></li>
+</ul>
+<p>El agente <code>cliente@P2</code> consume resultados producidos por otros agentes y los encadena para tomar decisiones, demostrando colaboración real multi-etapa.</p>
+<h1 id="contenido-adicional">4. Contenido adicional</h1>
+<h2 id="arquitectura-del-sistema-mermaid">4.1 Arquitectura del sistema (Mermaid)</h2>
+<pre class="mermaid"><code>flowchart LR
+    subgraph P1[Platform 1 - JADE]
+      MC1[Main Container P1]
+      C11[Container 1 P1\nlogistica@P1]
+      C12[Container 2 P1\nsupervisor@P1]
+      R[restaurante@P1]
+      DF1[(DF P1)]
+      MC1 --- R
+      MC1 --- C11
+      MC1 --- C12
+      R --- DF1
+      C11 --- DF1
+      C12 --- DF1
+    end
+
+    subgraph P2[Platform 2 - JADE]
+      MC2[Main Container P2]
+      C21[Container 1 P2\ncliente@P2]
+      P[pagos@P2]
+      DF2[(DF P2)]
+      MC2 --- P
+      MC2 --- C21
+      P --- DF2
+      C21 --- DF2
+    end
+
+    C21 -- CFP/PROPOSE/INFORM --&gt; R
+    C21 -- REQUEST/INFORM --&gt; C11
+    C21 -- REQUEST/CONFIRM --&gt; P
+    C21 -- INFORM --&gt; C12
+    P1 &lt;-. red Docker + MTP HTTP .-&gt; P2</code></pre>
+<h2 id="diagrama-de-flujo-de-interacción">4.2 Diagrama de flujo de interacción</h2>
+<pre class="mermaid"><code>sequenceDiagram
+    participant C as cliente@P2
+    participant R as restaurante@P1
+    participant L as logistica@P1
+    participant P as pagos@P2
+    participant S as supervisor@P1
+
+    C-&gt;&gt;R: CFP (orderId, items)
+    R--&gt;&gt;C: PROPOSE (total, prepMins)
+    C-&gt;&gt;R: ACCEPT_PROPOSAL
+    C-&gt;&gt;L: REQUEST entrega (prepMins, zona)
+    L--&gt;&gt;C: INFORM (eta, deliveryCost, route)
+    C-&gt;&gt;P: REQUEST pago (amount, deliveryFee)
+    alt Pago aprobado
+        P--&gt;&gt;C: CONFIRM
+        C-&gt;&gt;R: INFORM order CONFIRMED
+        C-&gt;&gt;S: INFORM ORDER_COMPLETED
+    else Pago rechazado
+        P--&gt;&gt;C: FAILURE
+        C-&gt;&gt;S: INFORM PAYMENT_REJECTED
+    end</code></pre>
+<h2 id="requerimientos-técnicos">4.3 Requerimientos técnicos</h2>
+<ul>
+<li>Java 17+</li>
+<li>Maven 3.9+</li>
+<li>JADE 4.5.0</li>
+<li>Docker Desktop y Docker Compose</li>
+<li>Red bridge para interconexión entre contenedores</li>
+<li>Exposición de MTP HTTP por plataforma:
+<ul>
+<li>P1: <code>http://p1-main:7778/acc</code></li>
+<li>P2: <code>http://p2-main:8888/acc</code></li>
+</ul></li>
+</ul>
+<h2 id="prototipo-implementado">4.4 Prototipo implementado</h2>
+<p>El prototipo se construyó como proyecto Maven modular, con paquetes separados para agentes, comportamientos y utilidades comunes. Se utilizaron comportamientos <code>CyclicBehaviour</code>, <code>OneShotBehaviour</code> y protocolo <code>ContractNetResponder/ContractNetInitiator</code>.</p>
+<h2 id="evidencias-capturas-de-pantalla">4.5 Evidencias (capturas de pantalla)</h2>
+<blockquote>
+<p>Sustituir los placeholders por capturas reales del entorno de ejecución.</p>
+</blockquote>
+<ol type="1">
+<li><strong>Captura 1 - GUI JADE P1 (Main + Containers):</strong>
+<ul>
+<li>Archivo sugerido: <code>docs/capturas/01-gui-p1.png</code></li>
+<li>Debe mostrar <code>restaurante@P1</code>, <code>logistica@P1</code>, <code>supervisor@P1</code>.</li>
+</ul></li>
+<li><strong>Captura 2 - GUI JADE P2 (Main + Container):</strong>
+<ul>
+<li>Archivo sugerido: <code>docs/capturas/02-gui-p2.png</code></li>
+<li>Debe mostrar <code>cliente@P2</code> y <code>pagos@P2</code>.</li>
+</ul></li>
+<li><strong>Captura 3 - Registro en DF:</strong>
+<ul>
+<li>Archivo sugerido: <code>docs/capturas/03-df-servicios.png</code></li>
+<li>Debe mostrar servicios registrados por cada agente.</li>
+</ul></li>
+<li><strong>Captura 4 - Mensajes ACL en consola:</strong>
+<ul>
+<li>Archivo sugerido: <code>docs/capturas/04-mensajes-acl.png</code></li>
+<li>Debe mostrar <code>CFP</code>, <code>PROPOSE</code>, <code>REQUEST</code>, <code>INFORM</code>, <code>CONFIRM/FAILURE</code>.</li>
+</ul></li>
+<li><strong>Captura 5 - Docker Compose en ejecución:</strong>
+<ul>
+<li>Archivo sugerido: <code>docs/capturas/05-docker-compose-up.png</code></li>
+<li>Debe mostrar los 5 contenedores activos.</li>
+</ul></li>
+</ol>
+<h2 id="configuración-docker-vm">4.6 Configuración Docker / VM</h2>
+<p>Se seleccionó Docker por eficiencia de despliegue, portabilidad y facilidad de réplica. La configuración implementada contiene cinco servicios:</p>
+<ul>
+<li><code>p1-main</code></li>
+<li><code>p1-c1</code></li>
+<li><code>p1-c2</code></li>
+<li><code>p2-main</code></li>
+<li><code>p2-c1</code></li>
+</ul>
+<p>Se empleó una red bridge compartida (<code>sma-net</code>) y comandos JADE específicos (<code>-name</code>, <code>-container</code>, <code>-host</code>, <code>-port</code>, <code>-mtp</code>) para establecer las dos plataformas distribuidas.</p>
+<h2 id="validación-de-ejecución-evidencia-técnica">4.7 Validación de ejecución (evidencia técnica)</h2>
+<p>Durante la validación final se confirmó la ejecución completa del sistema con los siguientes resultados observables:</p>
+<ul>
+<li>Construcción exitosa de imágenes (<code>docker compose build</code>).</li>
+<li>Levantamiento de los 5 contenedores (<code>docker compose up -d --build</code>).</li>
+<li>Registro de todos los agentes en DF.</li>
+<li>Intercambio colaborativo de mensajes ACL entre plataformas.</li>
+<li>Confirmación de pedidos completos con auditoría del supervisor.</li>
+</ul>
+<p>Comandos utilizados para verificar el estado del entorno:</p>
+<div class="sourceCode" id="cb3"><pre class="sourceCode powershell"><code class="sourceCode powershell"><span id="cb3-1"><a href="#cb3-1" aria-hidden="true" tabindex="-1"></a>docker compose <span class="fu">ps</span></span>
+<span id="cb3-2"><a href="#cb3-2" aria-hidden="true" tabindex="-1"></a>docker compose logs <span class="op">--</span>tail<span class="op">=</span>200 p2<span class="op">-</span>c1 p1<span class="op">-</span>main p1<span class="op">-</span>c1 p2<span class="op">-</span>main p1<span class="op">-</span>c2</span></code></pre></div>
+<p>Para facilitar la recopilación visual del informe, se preparó la guía:</p>
+<ul>
+<li><code>docs/checklist-capturas.md</code></li>
+</ul>
+<h2 id="ejemplos-de-mensajes-acl-intercambiados">4.8 Ejemplos de mensajes ACL intercambiados</h2>
+<h3 id="ejemplo-a-solicitud-de-cotización-contract-net">Ejemplo A: Solicitud de cotización (Contract Net)</h3>
+<ul>
+<li><strong>Emisor:</strong> <code>cliente@P2</code></li>
+<li><strong>Receptor:</strong> <code>restaurante@P1</code></li>
+<li><strong>Performativa:</strong> <code>CFP</code></li>
+<li><strong>Contenido:</strong> <code>orderId=ORD-171...;items=3;requestedAt=...</code></li>
+</ul>
+<h3 id="ejemplo-b-propuesta-de-restaurante">Ejemplo B: Propuesta de restaurante</h3>
+<ul>
+<li><strong>Emisor:</strong> <code>restaurante@P1</code></li>
+<li><strong>Receptor:</strong> <code>cliente@P2</code></li>
+<li><strong>Performativa:</strong> <code>PROPOSE</code></li>
+<li><strong>Contenido:</strong> <code>orderId=...;restaurant=restaurante;total=27.5;prepMins=18</code></li>
+</ul>
+<h3 id="ejemplo-c-solicitud-logística">Ejemplo C: Solicitud logística</h3>
+<ul>
+<li><strong>Emisor:</strong> <code>cliente@P2</code></li>
+<li><strong>Receptor:</strong> <code>logistica@P1</code></li>
+<li><strong>Performativa:</strong> <code>REQUEST</code></li>
+<li><strong>Contenido:</strong> <code>orderId=...;prepMins=18;zone=Sector-Centro</code></li>
+</ul>
+<h3 id="ejemplo-d-confirmación-de-pago">Ejemplo D: Confirmación de pago</h3>
+<ul>
+<li><strong>Emisor:</strong> <code>pagos@P2</code></li>
+<li><strong>Receptor:</strong> <code>cliente@P2</code></li>
+<li><strong>Performativa:</strong> <code>CONFIRM</code></li>
+<li><strong>Contenido:</strong> <code>orderId=...;approved=true;totalCharged=31.42</code></li>
+</ul>
+<h3 id="ejemplo-e-notificación-al-supervisor">Ejemplo E: Notificación al supervisor</h3>
+<ul>
+<li><strong>Emisor:</strong> <code>cliente@P2</code></li>
+<li><strong>Receptor:</strong> <code>supervisor@P1</code></li>
+<li><strong>Performativa:</strong> <code>INFORM</code></li>
+<li><strong>Contenido:</strong> <code>orderId=...;status=ORDER_COMPLETED;agent=cliente</code></li>
+</ul>
+<h1 id="conclusiones">5. Conclusiones</h1>
+<ol type="1">
+<li>El uso de JADE permitió implementar coordinación distribuida con separación clara de responsabilidades por agente.</li>
+<li>El Directory Facilitator resultó fundamental para reducir acoplamiento y habilitar descubrimiento dinámico de servicios.</li>
+<li>El protocolo ACL facilitó trazabilidad de interacciones y semántica explícita entre participantes.</li>
+<li>El despliegue en Docker simplificó la reproducción del entorno distribuido con dos plataformas y múltiples contenedores.</li>
+<li>La propuesta demuestra colaboración efectiva: cada etapa depende de resultados previos generados por otros agentes.</li>
+</ol>
+<h1 id="referencias">6. Referencias</h1>
+<ol type="1">
+<li>Bellifemine, F., Caire, G., &amp; Greenwood, D. (2007). <em>Developing Multi-Agent Systems with JADE</em>. Wiley.</li>
+<li>Foundation for Intelligent Physical Agents (FIPA). (2002). <em>ACL Message Structure Specification</em>.</li>
+<li>JADE Official Documentation. <a href="https://jade.tilab.com">https://jade.tilab.com</a></li>
+<li>Apache Maven Project. <a href="https://maven.apache.org">https://maven.apache.org</a></li>
+<li>Docker Documentation. <a href="https://docs.docker.com">https://docs.docker.com</a></li>
+</ol>

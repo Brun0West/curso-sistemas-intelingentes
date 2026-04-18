@@ -1,0 +1,11 @@
+target/
+.idea/
+.vscode/
+*.iml
+*.class
+*.log
+.DS_Store
+Thumbs.db
+
+# Maven wrapper (si no se usa)
+.mvn/wrapper/maven-wrapper.jar

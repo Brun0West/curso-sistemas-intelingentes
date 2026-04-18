@@ -1,0 +1,1 @@
+java --add-opens=java.xml/com.sun.org.apache.xerces.internal.jaxp=ALL-UNNAMED -cp "target/sma-jade-distribuido-1.0.0.jar;target/lib/*;jade.jar" jade.Boot -name P2 -gui -local-host localhost -local-port 2099 -mtp jade.mtp.http.MessageTransportProtocol(http://localhost:8888/acc) pagos:edu.sma.agents.PaymentAgent

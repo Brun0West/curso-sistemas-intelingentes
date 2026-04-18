@@ -1,0 +1,1 @@
+java --add-opens=java.xml/com.sun.org.apache.xerces.internal.jaxp=ALL-UNNAMED -cp "target/sma-jade-distribuido-1.0.0.jar;target/lib/*;jade.jar" jade.Boot -container -host localhost -port 1099 supervisor:edu.sma.agents.SupervisorAgent
