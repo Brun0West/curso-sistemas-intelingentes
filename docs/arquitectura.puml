@@ -1,0 +1,53 @@
+@startuml
+skinparam shadowing false
+skinparam packageStyle rectangle
+skinparam linetype ortho
+skinparam defaultTextAlignment center
+
+title Arquitectura distribuida SMA JADE (P1-P2)
+
+package "Plataforma P1 (JADE)" as P1 {
+  rectangle "Main Container P1\n(p1-main)" as P1Main
+  rectangle "Container 1 P1\nlogistica@P1" as P1C1
+  rectangle "Container 2 P1\nsupervisor@P1" as P1C2
+  rectangle "restaurante@P1" as Rest
+  database "DF P1" as DF1
+
+  P1Main -- P1C1
+  P1Main -- P1C2
+  P1Main -- Rest
+
+  Rest -- DF1 : register/search
+  P1C1 -- DF1 : register/search
+  P1C2 -- DF1 : register/search
+}
+
+package "Plataforma P2 (JADE)" as P2 {
+  rectangle "Main Container P2\n(p2-main)" as P2Main
+  rectangle "Container 1 P2\ncliente@P2" as P2C1
+  rectangle "pagos@P2" as Pay
+  database "DF P2" as DF2
+
+  P2Main -- P2C1
+  P2Main -- Pay
+
+  P2C1 -- DF2 : register/search
+  Pay -- DF2 : register/search
+}
+
+P2C1 --> Rest : CFP / PROPOSE / ACCEPT_PROPOSAL
+P2C1 --> P1C1 : REQUEST / INFORM (delivery)
+P2C1 --> Pay : REQUEST / CONFIRM|FAILURE (payment)
+P2C1 --> P1C2 : INFORM (ORDER_COMPLETED)
+P2C1 --> Rest : INFORM (CONFIRMED)
+
+cloud "Red Docker + MTP HTTP" as Net
+P1Main .. Net
+P2Main .. Net
+
+note bottom
+Protocolos ACL observados:
+CFP, PROPOSE, REQUEST, INFORM, CONFIRM, FAILURE
+end note
+
+@enduml

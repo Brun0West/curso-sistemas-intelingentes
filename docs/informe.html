@@ -1,10 +1,16 @@
 <h1 id="carátula">CARÁTULA</h1>
-<p><strong>Curso:</strong> [Completar]</p>
-<p><strong>Docente:</strong> [Completar]</p>
+<p><strong>Curso:</strong> <code>&lt;&lt;NOMBRE_DEL_CURSO&gt;&gt;</code></p>
+<p><strong>Docente:</strong> <code>&lt;&lt;NOMBRE_DEL_DOCENTE&gt;&gt;</code></p>
 <p><strong>Título del trabajo:</strong> <em>Implementación de un Sistema Multi-Agente Distribuido con JADE para Gestión Colaborativa de Pedidos de Restaurantes</em></p>
-<p><strong>Integrantes:</strong> - [Integrante 1] - [Integrante 2] - [Integrante 3] - [Integrante 4]</p>
-<p><strong>Repositorio GitHub:</strong> <a href="https://github.com/usuario/repositorio">https://github.com/usuario/repositorio</a></p>
-<p><strong>Video YouTube:</strong> <a href="https://youtube.com/...">https://youtube.com/…</a></p>
+<p><strong>Integrantes:</strong></p>
+<ul>
+<li><code>&lt;&lt;INTEGRANTE_1&gt;&gt;</code></li>
+<li><code>&lt;&lt;INTEGRANTE_2&gt;&gt;</code></li>
+<li><code>&lt;&lt;INTEGRANTE_3&gt;&gt;</code></li>
+<li><code>&lt;&lt;INTEGRANTE_4&gt;&gt;</code></li>
+</ul>
+<p><strong>Repositorio GitHub:</strong> [&lt;<URL_GITHUB_REPO>&gt;](&lt;<URL_GITHUB_REPO>&gt;)</p>
+<p><strong>Video YouTube:</strong> [&lt;<URL_YOUTUBE_VIDEO>&gt;](&lt;<URL_YOUTUBE_VIDEO>&gt;)</p>
 <p><strong>Fecha:</strong> 18 de abril de 2026</p>
 <hr />
 <h1 id="introducción">1. Introducción</h1>
@@ -41,60 +47,113 @@
 </ul>
 <p>El agente <code>cliente@P2</code> consume resultados producidos por otros agentes y los encadena para tomar decisiones, demostrando colaboración real multi-etapa.</p>
 <h1 id="contenido-adicional">4. Contenido adicional</h1>
-<h2 id="arquitectura-del-sistema-mermaid">4.1 Arquitectura del sistema (Mermaid)</h2>
-<pre class="mermaid"><code>flowchart LR
-    subgraph P1[Platform 1 - JADE]
-      MC1[Main Container P1]
-      C11[Container 1 P1\nlogistica@P1]
-      C12[Container 2 P1\nsupervisor@P1]
-      R[restaurante@P1]
-      DF1[(DF P1)]
-      MC1 --- R
-      MC1 --- C11
-      MC1 --- C12
-      R --- DF1
-      C11 --- DF1
-      C12 --- DF1
-    end
+<h2 id="arquitectura-del-sistema-plantuml">4.1 Arquitectura del sistema (PlantUML)</h2>
+<p>El diagrama fuente compilable se encuentra en:</p>
+<ul>
+<li><code>docs/arquitectura.puml</code></li>
+</ul>
+<p>Diagrama renderizado:</p>
+<figure>
+<img src="docs/arquitectura.png" alt="Arquitectura SMA JADE (PlantUML)" /><figcaption aria-hidden="true">Arquitectura SMA JADE (PlantUML)</figcaption>
+</figure>
+<pre class="plantuml"><code>@startuml
+skinparam shadowing false
+skinparam packageStyle rectangle
+skinparam linetype ortho
+skinparam defaultTextAlignment center
 
-    subgraph P2[Platform 2 - JADE]
-      MC2[Main Container P2]
-      C21[Container 1 P2\ncliente@P2]
-      P[pagos@P2]
-      DF2[(DF P2)]
-      MC2 --- P
-      MC2 --- C21
-      P --- DF2
-      C21 --- DF2
-    end
+title Arquitectura distribuida SMA JADE (P1-P2)
 
-    C21 -- CFP/PROPOSE/INFORM --&gt; R
-    C21 -- REQUEST/INFORM --&gt; C11
-    C21 -- REQUEST/CONFIRM --&gt; P
-    C21 -- INFORM --&gt; C12
-    P1 &lt;-. red Docker + MTP HTTP .-&gt; P2</code></pre>
-<h2 id="diagrama-de-flujo-de-interacción">4.2 Diagrama de flujo de interacción</h2>
-<pre class="mermaid"><code>sequenceDiagram
-    participant C as cliente@P2
-    participant R as restaurante@P1
-    participant L as logistica@P1
-    participant P as pagos@P2
-    participant S as supervisor@P1
+package &quot;Plataforma P1 (JADE)&quot; as P1 {
+  rectangle &quot;Main Container P1\n(p1-main)&quot; as P1Main
+  rectangle &quot;Container 1 P1\nlogistica@P1&quot; as P1C1
+  rectangle &quot;Container 2 P1\nsupervisor@P1&quot; as P1C2
+  rectangle &quot;restaurante@P1&quot; as Rest
+  database &quot;DF P1&quot; as DF1
 
-    C-&gt;&gt;R: CFP (orderId, items)
-    R--&gt;&gt;C: PROPOSE (total, prepMins)
-    C-&gt;&gt;R: ACCEPT_PROPOSAL
-    C-&gt;&gt;L: REQUEST entrega (prepMins, zona)
-    L--&gt;&gt;C: INFORM (eta, deliveryCost, route)
-    C-&gt;&gt;P: REQUEST pago (amount, deliveryFee)
-    alt Pago aprobado
-        P--&gt;&gt;C: CONFIRM
-        C-&gt;&gt;R: INFORM order CONFIRMED
-        C-&gt;&gt;S: INFORM ORDER_COMPLETED
-    else Pago rechazado
-        P--&gt;&gt;C: FAILURE
-        C-&gt;&gt;S: INFORM PAYMENT_REJECTED
-    end</code></pre>
+  P1Main -- P1C1
+  P1Main -- P1C2
+  P1Main -- Rest
+
+  Rest -- DF1 : register/search
+  P1C1 -- DF1 : register/search
+  P1C2 -- DF1 : register/search
+}
+
+package &quot;Plataforma P2 (JADE)&quot; as P2 {
+  rectangle &quot;Main Container P2\n(p2-main)&quot; as P2Main
+  rectangle &quot;Container 1 P2\ncliente@P2&quot; as P2C1
+  rectangle &quot;pagos@P2&quot; as Pay
+  database &quot;DF P2&quot; as DF2
+
+  P2Main -- P2C1
+  P2Main -- Pay
+
+  P2C1 -- DF2 : register/search
+  Pay -- DF2 : register/search
+}
+
+P2C1 --&gt; Rest : CFP / PROPOSE / ACCEPT_PROPOSAL
+P2C1 --&gt; P1C1 : REQUEST / INFORM (delivery)
+P2C1 --&gt; Pay : REQUEST / CONFIRM|FAILURE (payment)
+P2C1 --&gt; P1C2 : INFORM (ORDER_COMPLETED)
+P2C1 --&gt; Rest : INFORM (CONFIRMED)
+
+cloud &quot;Red Docker + MTP HTTP&quot; as Net
+P1Main .. Net
+P2Main .. Net
+
+note bottom
+Protocolos ACL observados:
+CFP, PROPOSE, REQUEST, INFORM, CONFIRM, FAILURE
+end note
+
+@enduml</code></pre>
+<h2 id="diagrama-de-flujo-de-interacción-plantuml">4.2 Diagrama de flujo de interacción (PlantUML)</h2>
+<p>El diagrama fuente compilable se encuentra en:</p>
+<ul>
+<li><code>docs/flujo-interaccion.puml</code></li>
+</ul>
+<p>Diagrama renderizado:</p>
+<figure>
+<img src="docs/flujo-interaccion.png" alt="Flujo de interacción ACL (PlantUML)" /><figcaption aria-hidden="true">Flujo de interacción ACL (PlantUML)</figcaption>
+</figure>
+<pre class="plantuml"><code>@startuml
+skinparam shadowing false
+skinparam sequenceMessageAlign center
+skinparam responseMessageBelowArrow true
+
+title Flujo de interacción ACL del pedido distribuido
+
+participant &quot;cliente@P2&quot; as C
+participant &quot;restaurante@P1&quot; as R
+participant &quot;logistica@P1&quot; as L
+participant &quot;pagos@P2&quot; as P
+participant &quot;supervisor@P1&quot; as S
+
+C -&gt; R : CFP\n(orderId, items)
+R --&gt; C : PROPOSE\n(total, prepMins)
+C -&gt; R : ACCEPT_PROPOSAL
+
+C -&gt; L : REQUEST\n(prepMins, zona)
+L --&gt; C : INFORM\n(eta, deliveryCost, route)
+
+C -&gt; P : REQUEST\n(amount, deliveryFee)
+alt Pago aprobado
+  P --&gt; C : CONFIRM
+  C -&gt; R : INFORM\n(order CONFIRMED)
+  C -&gt; S : INFORM\n(ORDER_COMPLETED)
+else Pago rechazado
+  P --&gt; C : FAILURE
+  C -&gt; S : INFORM\n(PAYMENT_REJECTED)
+end
+
+note over C,S
+Performativas ACL usadas:
+CFP, PROPOSE, REQUEST, INFORM, CONFIRM, FAILURE
+end note
+
+@enduml</code></pre>
 <h2 id="requerimientos-técnicos">4.3 Requerimientos técnicos</h2>
 <ul>
 <li>Java 17+</li>

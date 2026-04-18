@@ -1,0 +1,36 @@
+@startuml
+skinparam shadowing false
+skinparam sequenceMessageAlign center
+skinparam responseMessageBelowArrow true
+
+title Flujo de interacción ACL del pedido distribuido
+
+participant "cliente@P2" as C
+participant "restaurante@P1" as R
+participant "logistica@P1" as L
+participant "pagos@P2" as P
+participant "supervisor@P1" as S
+
+C -> R : CFP\n(orderId, items)
+R --> C : PROPOSE\n(total, prepMins)
+C -> R : ACCEPT_PROPOSAL
+
+C -> L : REQUEST\n(prepMins, zona)
+L --> C : INFORM\n(eta, deliveryCost, route)
+
+C -> P : REQUEST\n(amount, deliveryFee)
+alt Pago aprobado
+    P --> C : CONFIRM
+    C -> R : INFORM\n(order CONFIRMED)
+    C -> S : INFORM\n(ORDER_COMPLETED)
+else Pago rechazado
+    P --> C : FAILURE
+    C -> S : INFORM\n(PAYMENT_REJECTED)
+end
+
+note over C,S
+Performativas ACL usadas:
+CFP, PROPOSE, REQUEST, INFORM, CONFIRM, FAILURE
+end note
+
+@enduml

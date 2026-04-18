@@ -63,66 +63,119 @@ El agente `cliente@P2` consume resultados producidos por otros agentes y los enc
 
 # 4. Contenido adicional
 
-## 4.1 Arquitectura del sistema (Mermaid)
+## 4.1 Arquitectura del sistema (PlantUML)
 
-```mermaid
-flowchart LR
-    subgraph P1[Platform 1 - JADE]
-      MC1[Main Container P1]
-      C11[Container 1 P1\nlogistica@P1]
-      C12[Container 2 P1\nsupervisor@P1]
-      R[restaurante@P1]
-      DF1[(DF P1)]
-      MC1 --- R
-      MC1 --- C11
-      MC1 --- C12
-      R --- DF1
-      C11 --- DF1
-      C12 --- DF1
-    end
+El diagrama fuente compilable se encuentra en:
 
-    subgraph P2[Platform 2 - JADE]
-      MC2[Main Container P2]
-      C21[Container 1 P2\ncliente@P2]
-      P[pagos@P2]
-      DF2[(DF P2)]
-      MC2 --- P
-      MC2 --- C21
-      P --- DF2
-      C21 --- DF2
-    end
+- `docs/arquitectura.puml`
 
-    C21 -- CFP/PROPOSE/INFORM --> R
-    C21 -- REQUEST/INFORM --> C11
-    C21 -- REQUEST/CONFIRM --> P
-    C21 -- INFORM --> C12
-    P1 <-. red Docker + MTP HTTP .-> P2
+Diagrama renderizado:
+
+![Arquitectura SMA JADE (PlantUML)](docs/arquitectura.png)
+
+```plantuml
+@startuml
+skinparam shadowing false
+skinparam packageStyle rectangle
+skinparam linetype ortho
+skinparam defaultTextAlignment center
+
+title Arquitectura distribuida SMA JADE (P1-P2)
+
+package "Plataforma P1 (JADE)" as P1 {
+  rectangle "Main Container P1\n(p1-main)" as P1Main
+  rectangle "Container 1 P1\nlogistica@P1" as P1C1
+  rectangle "Container 2 P1\nsupervisor@P1" as P1C2
+  rectangle "restaurante@P1" as Rest
+  database "DF P1" as DF1
+
+  P1Main -- P1C1
+  P1Main -- P1C2
+  P1Main -- Rest
+
+  Rest -- DF1 : register/search
+  P1C1 -- DF1 : register/search
+  P1C2 -- DF1 : register/search
+}
+
+package "Plataforma P2 (JADE)" as P2 {
+  rectangle "Main Container P2\n(p2-main)" as P2Main
+  rectangle "Container 1 P2\ncliente@P2" as P2C1
+  rectangle "pagos@P2" as Pay
+  database "DF P2" as DF2
+
+  P2Main -- P2C1
+  P2Main -- Pay
+
+  P2C1 -- DF2 : register/search
+  Pay -- DF2 : register/search
+}
+
+P2C1 --> Rest : CFP / PROPOSE / ACCEPT_PROPOSAL
+P2C1 --> P1C1 : REQUEST / INFORM (delivery)
+P2C1 --> Pay : REQUEST / CONFIRM|FAILURE (payment)
+P2C1 --> P1C2 : INFORM (ORDER_COMPLETED)
+P2C1 --> Rest : INFORM (CONFIRMED)
+
+cloud "Red Docker + MTP HTTP" as Net
+P1Main .. Net
+P2Main .. Net
+
+note bottom
+Protocolos ACL observados:
+CFP, PROPOSE, REQUEST, INFORM, CONFIRM, FAILURE
+end note
+
+@enduml
 ```
 
-## 4.2 Diagrama de flujo de interacción
+## 4.2 Diagrama de flujo de interacción (PlantUML)
 
-```mermaid
-sequenceDiagram
-    participant C as cliente@P2
-    participant R as restaurante@P1
-    participant L as logistica@P1
-    participant P as pagos@P2
-    participant S as supervisor@P1
+El diagrama fuente compilable se encuentra en:
 
-    C->>R: CFP (orderId, items)
-    R-->>C: PROPOSE (total, prepMins)
-    C->>R: ACCEPT_PROPOSAL
-    C->>L: REQUEST entrega (prepMins, zona)
-    L-->>C: INFORM (eta, deliveryCost, route)
-    C->>P: REQUEST pago (amount, deliveryFee)
-    alt Pago aprobado
-        P-->>C: CONFIRM
-        C->>R: INFORM order CONFIRMED
-        C->>S: INFORM ORDER_COMPLETED
-    else Pago rechazado
-        P-->>C: FAILURE
-        C->>S: INFORM PAYMENT_REJECTED
-    end
+- `docs/flujo-interaccion.puml`
+
+Diagrama renderizado:
+
+![Flujo de interacción ACL (PlantUML)](docs/flujo-interaccion.png)
+
+```plantuml
+@startuml
+skinparam shadowing false
+skinparam sequenceMessageAlign center
+skinparam responseMessageBelowArrow true
+
+title Flujo de interacción ACL del pedido distribuido
+
+participant "cliente@P2" as C
+participant "restaurante@P1" as R
+participant "logistica@P1" as L
+participant "pagos@P2" as P
+participant "supervisor@P1" as S
+
+C -> R : CFP\n(orderId, items)
+R --> C : PROPOSE\n(total, prepMins)
+C -> R : ACCEPT_PROPOSAL
+
+C -> L : REQUEST\n(prepMins, zona)
+L --> C : INFORM\n(eta, deliveryCost, route)
+
+C -> P : REQUEST\n(amount, deliveryFee)
+alt Pago aprobado
+  P --> C : CONFIRM
+  C -> R : INFORM\n(order CONFIRMED)
+  C -> S : INFORM\n(ORDER_COMPLETED)
+else Pago rechazado
+  P --> C : FAILURE
+  C -> S : INFORM\n(PAYMENT_REJECTED)
+end
+
+note over C,S
+Performativas ACL usadas:
+CFP, PROPOSE, REQUEST, INFORM, CONFIRM, FAILURE
+end note
+
+@enduml
 ```
 
 ## 4.3 Requerimientos técnicos
