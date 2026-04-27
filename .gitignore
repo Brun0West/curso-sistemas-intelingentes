@@ -9,3 +9,10 @@ Thumbs.db
 
 # Maven wrapper (si no se usa)
 .mvn/wrapper/maven-wrapper.jar
+
+
+# JADE files
+APDescription.txt
+*MTP*.txt
+
+

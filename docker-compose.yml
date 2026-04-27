@@ -3,18 +3,12 @@ services:
     build: .
     container_name: main-container
     command:
-      - "-name"
-      - "FLORERIA"
-      - "-local-host"
-      - "main-container"
-      - "-local-port"
-      - "1099"
-      - "-mtp"
-      - "jade.mtp.http.MessageTransportProtocol(http://main-container:7778/acc)"
-      - "recepcionista:edu.sma.agents.RecepcionistaAgent;florista:edu.sma.agents.FloristaAgent"
+    - "-host"
+    - "main-container"
+    - "-agents"
+    - "recepcionistaAgent:edu.sma.agents.RecepcionistaAgent;floristaAgent:edu.sma.agents.FloristaAgent"
     ports:
       - "1099:1099"
-      - "7778:7778"
     networks:
       - jade-net
 
@@ -27,12 +21,12 @@ services:
       - "main-container"
       - "-port"
       - "1099"
-      - "novio1:edu.sma.agents.NovioAgent(Carlos,1);novio2:edu.sma.agents.NovioAgent(Miguel,2);novio3:edu.sma.agents.NovioAgent(Javier,3)"
+      - "-agents"
+      - "novio1:edu.sma.agents.NovioAgent(1,Matias);novio2:edu.sma.agents.NovioAgent(2,Alejandro);novio3:edu.sma.agents.NovioAgent(3,Luigi)"
     depends_on:
       - main-container
     networks:
       - jade-net
-
 networks:
   jade-net:
     driver: bridge

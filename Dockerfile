@@ -10,7 +10,7 @@ RUN mvn -q -DskipTests package
 FROM eclipse-temurin:17-jre
 WORKDIR /app
 
-COPY --from=build /app/target/sma-jade-distribuido-1.0.0.jar /app/app.jar
+COPY --from=build /app/target/*.jar /app/app.jar
 COPY --from=build /app/jade.jar /app/jade.jar
 
 ENTRYPOINT ["java", "--add-opens=java.xml/com.sun.org.apache.xerces.internal.jaxp=ALL-UNNAMED", "-cp", "/app/app.jar:/app/jade.jar", "jade.Boot"]
