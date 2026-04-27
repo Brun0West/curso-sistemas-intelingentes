@@ -1,138 +1,233 @@
-# Tarea SMA JADE - Sistema Multi-Agente Distribuido
+# Sistema Multi-Agente JADE - Gestión de Pedidos de Floristería
 
-Proyecto académico implementado con **JADE + Maven + Docker** para demostrar coordinación distribuida entre dos plataformas de agentes.
+Proyecto académico que implementa un **sistema distribuido de gestión de pedidos de floristería** usando **JADE (Java Agent Development Framework)**, Maven y Docker. Demuestra la comunicación coordinada entre múltiples agentes en dos plataformas JADE distintas.
 
-## 1) Lógica de negocio implementada
+## 1. Descripción Técnica Detallada
 
-Se implementó un sistema distribuido de gestión de pedidos de restaurantes con colaboración real entre agentes:
+### Visión General del Sistema
 
-- **P1 (Plataforma 1)**
-  - `restaurante@P1`: ofrece cotizaciones de menú mediante protocolo Contract Net.
-  - `logistica@P1`: calcula ETA y costo de entrega.
-  - `supervisor@P1`: monitorea eventos y genera reporte periódico.
-- **P2 (Plataforma 2)**
-  - `pagos@P2`: valida pagos y confirma/rechaza transacciones.
-  - `cliente@P2`: inicia pedidos, selecciona propuesta y coordina flujo extremo a extremo.
+Plataforma JADE única distribuida en **dos contenedores Docker** (en la misma máquina Windows):
 
-### Comunicación y estándares
+- **Main Container**: Aloja al **Recepcionista** y al **Florista**
+- **Peripheral Container**: Aloja a los **tres Novios**
 
-- Registro y descubrimiento de servicios por **DF (Directory Facilitator)**.
-- Intercambio de mensajes **FIPA-ACL** con performativas: `CFP`, `PROPOSE`, `ACCEPT_PROPOSAL`, `REQUEST`, `INFORM`, `CONFIRM`, `FAILURE`.
-- Comunicación interplataforma usando **HTTP MTP** (`jade.mtp.http.MessageTransportProtocol`).
+**Directory Facilitator (DF)**: Solo existe en el Main Container. Los agentes del contenedor peripheral se registran en él mediante el mecanismo estándar de JADE (usando `-host` y `-port`). El acceso al DF es transparente porque todos pertenecen a la misma plataforma.
 
-## 2) Estructura del repositorio
+**Comunicación**: Mensajes ACL con performativas FIPA estándar (QUERY-IF, REQUEST, INFORM, REFUSE, FAILURE).
 
-```text
+### 2. Especificación de Agentes
+
+#### 2.1. Novios (3 agentes)
+
+**Parámetros de creación:**
+- `nombre`: String (ej. "Carlos", "Miguel", "Javier")
+- `orden`: Integer (1, 2 o 3) → determina el turno de atención
+
+**Comportamiento:**
+
+1. Al iniciar, el novio espera un tiempo aleatorio entre **5 y 8 segundos** (uniforme, en milisegundos).
+2. Luego envía un mensaje `QUERY-IF` al recepcionista con contenido: `"miPedidoEstaListo? orden=X"`.
+3. Después de enviar, vuelve a esperar el mismo rango aleatorio y repite el ciclo.
+4. El ciclo se detiene cuando el novio recibe un `INFORM` del recepcionista indicando: `"Tu pedido está listo"`.
+5. En ese momento, el novio responde con un mensaje `INFORM` de vuelta confirmando: `"ya voy a recogerlo"`.
+6. Luego el novio termina su ejecución.
+
+**Implementación JADE:**
+- Atributos: `nombre`, `orden`, `pedidoListo` (booleano)
+- `Setup()`: Registra el servicio en DF y busca el recepcionista
+- `TickerBehaviour` (5-8s): Envía `QUERY-IF` mientras `pedidoListo == false`
+- `CyclicBehaviour`: Recibe respuestas del recepcionista
+
+#### 2.2. Recepcionista (1 agente)
+
+**Parámetros**: Ninguno especial
+
+**Comportamiento:**
+
+1. Escucha continuamente mensajes entrantes.
+2. **Si recibe `QUERY-IF` de un novio:**
+   - Extrae la orden del contenido
+   - Envía un mensaje `REQUEST` al florista: `"estaListo? orden=X"`
+   - Espera la respuesta del florista (bloqueante, timeout 3s)
+   - Si el florista responde `INFORM` con "SI": envía `INFORM` al novio: `"Tu pedido está listo"`
+   - Si el florista responde `REFUSE` con "NO": envía `INFORM` al novio: `"Aún no está listo"`
+   - Si timeout/FAILURE: reintenta o notifica al novio
+
+3. **Si recibe `INFORM` del florista** con "Pedido listo para orden X":
+   - Busca el AID del novio correspondiente (por orden)
+   - Envía `INFORM`: `"Tu pedido está listo"`
+
+4. **Si recibe `INFORM` del novio** con "ya voy a recogerlo":
+   - Registra el evento en log
+
+**Implementación JADE:**
+- `Setup()`: Registra en DF y busca al florista
+- Mantiene un mapa `orden → AID` del novio
+- `CyclicBehaviour`: Atiende todos los tipos de mensajes
+
+#### 2.3. Florista (1 agente)
+
+**Parámetros**: Ninguno especial
+
+**Atributos internos:**
+- `siguienteOrdenPorAtender`: comienza en 1
+- `tiempoTrabajoMin`: 10 segundos
+- `tiempoTrabajoMax`: 15 segundos
+
+**Comportamiento:**
+
+1. **Atender `REQUEST` del recepcionista** (`CyclicBehaviour`):
+   - Extrae la orden del contenido: `"estaListo? orden=X"`
+   - Si `X < siguienteOrdenPorAtender`: responde `INFORM` con "SI" (ya terminado)
+   - Si `X >= siguienteOrdenPorAtender`: responde `REFUSE` con "NO" (aún no)
+   - **Nota**: El florista no comienza a trabajar por una REQUEST; trabaja autónomamente
+
+2. **Producción autónoma** (`TickerBehaviour` con periodo aleatorio 10-15s):
+   - Cada tick, si `siguienteOrdenPorAtender ≤ 3`:
+     - Marca el arreglo como listo
+     - Envía `INFORM` al recepcionista: `"Pedido listo para orden X"`
+     - Incrementa `siguienteOrdenPorAtender`
+   - Si `siguienteOrdenPorAtender > 3`: detiene el comportamiento (fin)
+
+3. **Sincronización**: El florista atiende REQUEST concurrentemente con el trabajo de fondo gracias a los comportamientos independientes
+
+**Implementación JADE:**
+- `Setup()`: Registra en DF y busca al recepcionista
+- `CyclicBehaviour`: Responde REQUEST
+- `TickerBehaviour`: Ejecuta producción con periodo aleatorio
+
+### 3. Flujo de Mensajes Detallado
+
+| Paso | Emisor → Receptor | Performativa | Contenido | Propósito |
+|------|-------------------|--------------|----------|-----------|
+| 1 | Novio1 → Recepcionista | QUERY-IF | `miPedidoEstaListo? orden=1` | Preguntar si su pedido está listo |
+| 2 | Recepcionista → Florista | REQUEST | `estaListo? orden=1` | Consultar al florista |
+| 3 | Florista → Recepcionista | REFUSE | `NO` | Indicar que aún no está listo |
+| 4 | Recepcionista → Novio1 | INFORM | `Aún no está listo` | Responder al novio |
+| (Repite 1-4 cada 5-8 segundos) | | | | |
+| 5 (paralelo) | Florista (autónomo) → Recepcionista | INFORM | `Pedido listo para orden 1` | Notificar finalización |
+| 6 | Recepcionista → Novio1 | INFORM | `Tu pedido está listo` | Avisar al novio |
+| 7 | Novio1 → Recepcionista | INFORM | `ya voy a recogerlo` | Confirmar recogida → Fin del novio |
+
+**Luego** el florista produce orden 2 y 3 con los mismos pasos.
+
+### Notas del Protocolo
+
+- Si el florista recibe REQUEST para orden **ya terminada**: responde `INFORM` con "SI"
+- Si el florista recibe REQUEST para orden **futura**: responde `REFUSE` con "NO"
+
+## 4. Estructura del Repositorio
+
+```
 .
-├── src/main/java/edu/sma
-│   ├── agents
-│   │   ├── ClientAgent.java
-│   │   ├── LogisticsAgent.java
-│   │   ├── PaymentAgent.java
-│   │   ├── RestaurantAgent.java
-│   │   └── SupervisorAgent.java
-│   ├── behaviours
-│   │   ├── OrderCycleBehaviour.java
-│   │   ├── RestaurantContractNetResponder.java
-│   │   └── SupervisorMonitorBehaviour.java
-│   └── common
-│       ├── DfUtils.java
-│       ├── PayloadCodec.java
-│       ├── RemoteAidFactory.java
-│       └── ServiceNames.java
-├── docs
+├── src/main/java/edu/sma/
+│   ├── agents/
+│   │   ├── NovioAgent.java           (3 instancias)
+│   │   ├── RecepcionistaAgent.java
+│   │   └── FloristaAgent.java
+│   └── common/
+│       ├── DfUtils.java              (utilidades DF)
+│       ├── ServiceNames.java         (constantes de servicios)
+│       ├── PayloadCodec.java         (codificación de mensajes)
+│       └── RemoteAidFactory.java     (factory para AID remotos)
+├── docker-compose.yml                (orquestación de 2 contenedores)
+├── Dockerfile                        (multi-stage build)
+├── pom.xml                           (Java 17, JADE 4.5.0, Maven)
+├── scripts/
+│   ├── start-main-local.ps1          (Main Container local)
+│   └── start-peripheral-local.ps1    (Peripheral Container local)
+├── docs/
 │   ├── informe.md
-│   ├── guion-video-youtube.md
-│   └── capturas/
-├── scripts
-│   ├── start-p1-main.ps1
-│   ├── start-p1-c1.ps1
-│   ├── start-p1-c2.ps1
-│   ├── start-p2-main.ps1
-│   └── start-p2-c1.ps1
-├── docker-compose.yml
-├── Dockerfile
-├── pom.xml
-└── .gitignore
+│   └── arquitectura.puml
+├── jade.jar                          (librería JADE como dependencia de sistema)
+└── README.md                         (este archivo)
 ```
 
-## 3) Requisitos
+## 5. Requisitos
 
-- Java 17+
-- Maven 3.9+
-- Docker Desktop + Docker Compose
-- Windows PowerShell (`pwsh`) para scripts locales
+- **Java 17+** (LTS)
+- **Maven 3.9+**
+- **Docker Desktop + Docker Compose** (para modo distribuido)
+- **Windows PowerShell** (`pwsh`) para scripts locales
 
-## 4) Ejecución con Docker (entorno distribuido recomendado)
+## 6. Ejecución con Docker (Recomendado - Entorno Distribuido)
 
-```bash
+### 6.1. Crear la red Docker
+
+```powershell
+docker network create jade-net
+```
+
+### 6.2. Compilar y levantar
+
+```powershell
 docker compose build
 docker compose up
 ```
 
-Para detener:
+Esto levanta automáticamente:
+- **main-container** (Recepcionista + Florista)
+- **peripheral-container** (3 Novios)
 
-```bash
+### 6.3. Detener
+
+```powershell
 docker compose down
 ```
 
-## 5) Ejecución local con GUI JADE (para capturas del informe)
+## 7. Ejecución Local con GUI JADE (para desarrollo/capturas)
 
-Abrir 5 terminales en la raíz del proyecto y ejecutar:
+Abrir **2 terminales PowerShell** en la raíz del proyecto:
+
+**Terminal 1 - Main Container (con GUI):**
+```powershell
+./scripts/start-main-local.ps1
+```
+
+**Terminal 2 - Peripheral Container:**
+```powershell
+./scripts/start-peripheral-local.ps1
+```
+
+Esto permite ver en tiempo real en la GUI JADE:
+- Los tres novios enviando QUERY-IF cada 5-8 segundos
+- El florista produciendo cada 10-15 segundos
+- El recepcionista coordinando las comunicaciones
+
+## 8. Flujo de Ejecución Esperado
+
+1. **Segundos 0-10**: Los 3 novios inician, esperan 5-8s aleatorios
+2. **Segundo ~8**: Novio1 (Carlos) envía QUERY-IF → Recepcionista pregunta al Florista → Florista responde "NO" → Recepcionista avisa "Aún no está listo"
+3. **Segundo ~15**: Florista completa orden 1, notifica al Recepcionista → Recepcionista avisa a Novio1 "Tu pedido está listo" → Novio1 responde "ya voy a recogerlo" → **Novio1 finaliza**
+4. **Segundo ~20**: Novio2 (Miguel) comienza a preguntar
+5. **Segundo ~28**: Florista completa orden 2 → Novio2 recibe notificación → **Novio2 finaliza**
+6. **Segundo ~30**: Novio3 (Javier) comienza a preguntar
+7. **Segundo ~42**: Florista completa orden 3 → Novio3 recibe notificación → **Novio3 finaliza**
+8. **Fin**: Florista se detiene (máximo de órdenes alcanzado)
+
+## 9. Condiciones de Finalización
+
+- **Demo termina** cuando los **3 novios** han confirmado que van a recoger su pedido
+- El **Recepcionista** y **Florista** pueden seguir ejecutándose sin más interacciones
+
+## 10. Notas de Desarrollo
+
+- **Sincronización**: Los comportamientos `CyclicBehaviour` y `TickerBehaviour` se ejecutan concurrentemente sin bloqueos
+- **DF (Directory Facilitator)**: Todos los agentes se registran y buscan dinámicamente el servicio correspondiente
+- **Timeouts**: El Recepcionista espera respuesta del Florista con timeout de 3 segundos
+- **Intervalo de consulta**: Los Novios consultan con intervalo aleatorio 5-8 segundos
+- **Tiempo de producción**: El Florista trabaja cada 10-15 segundos (aleatorio)
+
+## 11. Debugging
+
+Para ver los logs detallados:
 
 ```powershell
-./scripts/start-p1-main.ps1
+# Ver logs del main-container
+docker logs -f main-container
+
+# Ver logs del peripheral-container
+docker logs -f peripheral-container
 ```
 
-```powershell
-./scripts/start-p1-c1.ps1
-```
-
-```powershell
-./scripts/start-p1-c2.ps1
-```
-
-```powershell
-./scripts/start-p2-main.ps1
-```
-
-```powershell
-./scripts/start-p2-c1.ps1
-```
-
-## 6) Flujo colaborativo esperado
-
-1. `cliente@P2` envía `CFP` a `restaurante@P1`.
-2. `restaurante@P1` responde `PROPOSE` (precio y tiempo de preparación).
-3. `cliente@P2` acepta propuesta (`ACCEPT_PROPOSAL`).
-4. `cliente@P2` solicita a `logistica@P1` (`REQUEST`) ETA/costo.
-5. `logistica@P1` responde `INFORM`.
-6. `cliente@P2` solicita validación a `pagos@P2` (`REQUEST`).
-7. `pagos@P2` responde `CONFIRM` o `FAILURE`.
-8. `cliente@P2` notifica a `restaurante@P1` y `supervisor@P1` (`INFORM`).
-
-## 7) Entregables adicionales
-
-- Informe académico completo: `docs/informe.md`
-- Guion de video (≤10 min): `docs/guion-video-youtube.md`
-
-Generar PDF del informe (coordinador):
-
-```powershell
-./scripts/export-informe-pdf.ps1
-```
-
-## 8) Publicación en GitHub
-
-```bash
-git init
-git add .
-git commit -m "Entrega Tarea SMA JADE distribuido"
-git branch -M main
-git remote add origin https://github.com/<usuario>/<repositorio>.git
-git push -u origin main
-```
-
-## 9) Nota académica
-
-El diseño está alineado con los requisitos mínimos: 2 plataformas, 5 agentes, registro DF, mensajes ACL y colaboración efectiva entre agentes distribuidos.
+O en modo local, la salida se imprime directamente en el terminal.
