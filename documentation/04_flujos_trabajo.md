@@ -8,18 +8,18 @@ El `RecepcionistaAgent` actúa como un orquestador o *proxy* entre los clientes 
 
 ```mermaid
 flowchart TD
-    A[Inicio: Mensaje entrante recibido] --> B{¿Cumple Plantilla (MessageTemplate)?<br>Performative: QUERY_IF<br>Protocol: consultar-pedido}
+    A["Inicio: Mensaje entrante recibido"] --> B{"¿Cumple Plantilla (MessageTemplate)?<br>Performative: QUERY_IF<br>Protocol: consultar-pedido"}
 
-    B -- No --> C[Ignorar o Bloquear (block)]
+    B -- No --> C["Ignorar o Bloquear (block)"]
 
-    B -- Sí --> D[Leer contenido del mensaje:<br>"pedido turno-{X}-de-{Nombre}-esta listo?"]
-    D --> E[Procesar NLP Simple (Split de cadena)]
-    E --> F[Extraer 'orden' (int) y 'nombre' (String)]
+    B -- Sí --> D["Leer contenido del mensaje:<br>pedido turno-{X}-de-{Nombre}-esta listo?"]
+    D --> E["Procesar NLP Simple (Split de cadena)"]
+    E --> F["Extraer 'orden' (int) y 'nombre' (String)"]
 
-    F --> G[Guardar Estado Interno:<br>mapaNovios.put(orden, remitente AID)]
+    F --> G["Guardar Estado Interno:<br>mapaNovios.put(orden, remitente AID)"]
 
-    G --> H[Instanciar Comportamiento Dinámico:<br>PreguntarEstadoPedido (AchieveREInitiator)]
-    H --> I[Crear mensaje REQUEST al Florista:<br>"pedido-{orden}- esta listo?"]
+    G --> H["Instanciar Comportamiento Dinámico:<br>PreguntarEstadoPedido (AchieveREInitiator)"]
+    H --> I["Crear mensaje REQUEST al Florista:<br>pedido-{orden}- esta listo?"]
     I --> J[Enviar REQUEST y Esperar Respuesta (Async)]
 
     J --> K{¿Tipo de respuesta del Florista?}
@@ -47,26 +47,26 @@ Este es el pipeline principal de trabajo en segundo plano.
 
 ```mermaid
 flowchart TD
-    A((Inicio Ticker)) --> B{¿siguienteOrdenPorAtender <= MAX_ORDENES (3)?}
+    A(("Inicio Ticker")) --> B{"¿siguienteOrdenPorAtender <= MAX_ORDENES (3)?"}
 
-    B -- No --> C[Imprimir log: "Todas las órdenes completadas"]
-    C --> D[Detener Comportamiento: stop()]
-    D --> E((Fin del Ticker))
+    B -- No --> C["Imprimir log: Todas las órdenes completadas"]
+    C --> D["Detener Comportamiento: stop()"]
+    D --> E(("Fin del Ticker"))
 
-    B -- Sí --> F[producirArreglo()]
-    F --> G[Imprimir log: "Comenzando trabajo en orden X"]
+    B -- Sí --> F["producirArreglo()"]
+    F --> G["Imprimir log: Comenzando trabajo en orden X"]
 
-    G --> H[Simulación: El trabajo se completa instantáneamente<br>en este tick por diseño reactivo]
+    G --> H["Simulación: El trabajo se completa instantáneamente<br>en este tick por diseño reactivo"]
 
-    H --> I[Imprimir log: "Orden X completada"]
+    H --> I["Imprimir log: Orden X completada"]
 
-    I --> J[notificarRecepcionista(X)]
-    J --> K[Crear mensaje INFORM:<br>"Pedido listo para orden X"]
-    K --> L[Enviar a Recepcionista (AID predefinido)]
+    I --> J["notificarRecepcionista(X)"]
+    J --> K["Crear mensaje INFORM:<br>Pedido listo para orden X"]
+    K --> L["Enviar a Recepcionista (AID predefinido)"]
 
-    L --> M[Incrementar: siguienteOrdenPorAtender++]
+    L --> M["Incrementar: siguienteOrdenPorAtender++"]
 
-    M --> N[Generar nuevo intervalo aleatorio:<br>10s a 15s]
+    M --> N["Generar nuevo intervalo aleatorio:<br>10s a 15s"]
     N --> O[Reiniciar Ticker (reset) con nuevo intervalo]
     O --> E
 ```
@@ -77,14 +77,14 @@ Cuando el Florista recibe una interrupción (REQUEST) del Recepcionista, no deti
 
 ```mermaid
 flowchart LR
-    A[Recibir REQUEST de Recepcionista] --> B[Extraer número de orden solicitada (X)]
-    B --> C{¿X < siguienteOrdenPorAtender?}
+    A["Recibir REQUEST de Recepcionista"] --> B["Extraer número de orden solicitada (X)"]
+    B --> C{"¿X < siguienteOrdenPorAtender?"}
 
-    C -- Sí --> D[Decisión: El pedido ya fue producido en el pasado]
-    D --> E[Crear respuesta INFORM con "SI"]
-    E --> F[Enviar respuesta al Recepcionista]
+    C -- Sí --> D["Decisión: El pedido ya fue producido en el pasado"]
+    D --> E["Crear respuesta INFORM con 'SI'"]
+    E --> F["Enviar respuesta al Recepcionista"]
 
-    C -- No --> G[Decisión: El pedido está en producción o en cola]
-    G --> H[Crear respuesta REFUSE con "NO"]
+    C -- No --> G["Decisión: El pedido está en producción o en cola"]
+    G --> H["Crear respuesta REFUSE con 'NO'"]
     H --> F
 ```

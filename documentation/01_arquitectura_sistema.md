@@ -21,32 +21,22 @@ C4Component
         }
 
         Boundary(peripheral_container, "Peripheral Container (Docker)") {
-            Component(novio1, "NovioAgent (Carlos)", "JADE Agent", "Consulta periódicamente el estado de su pedido.")
-            Component(novio2, "NovioAgent (Miguel)", "JADE Agent", "Consulta periódicamente el estado de su pedido.")
-            Component(novio3, "NovioAgent (Javier)", "JADE Agent", "Consulta periódicamente el estado de su pedido.")
+            Component(novios, "NovioAgent (x3)", "JADE Agent", "Tres instancias (Carlos, Miguel, Javier) que consultan periódicamente el estado de su pedido.")
         }
     }
 
-    Rel(cliente, novio1, "Representa a")
-    Rel(cliente, novio2, "Representa a")
-    Rel(cliente, novio3, "Representa a")
+    Rel(cliente, novios, "Representa a")
 
-    Rel(novio1, df, "Busca servicio Recepcionista", "FIPA-Request")
-    Rel(novio2, df, "Busca servicio Recepcionista", "FIPA-Request")
-    Rel(novio3, df, "Busca servicio Recepcionista", "FIPA-Request")
+    Rel(novios, df, "Busca servicio Recepcionista", "FIPA-Request")
 
     Rel(recepcionista, df, "Registra servicio Recepcionista", "FIPA-Request")
     Rel(florista, df, "Registra servicio Florista", "FIPA-Request")
 
-    Rel(novio1, recepcionista, "Consulta estado pedido", "ACLMessage (QUERY-IF)")
-    Rel(novio2, recepcionista, "Consulta estado pedido", "ACLMessage (QUERY-IF)")
-    Rel(novio3, recepcionista, "Consulta estado pedido", "ACLMessage (QUERY-IF)")
+    Rel(novios, recepcionista, "Consulta estado pedido", "ACLMessage (QUERY-IF)")
 
     Rel(recepcionista, florista, "Consulta estado pedido", "ACLMessage (REQUEST)")
     Rel(florista, recepcionista, "Notifica finalización", "ACLMessage (INFORM)")
-    Rel(recepcionista, novio1, "Notifica finalización", "ACLMessage (INFORM)")
-    Rel(recepcionista, novio2, "Notifica finalización", "ACLMessage (INFORM)")
-    Rel(recepcionista, novio3, "Notifica finalización", "ACLMessage (INFORM)")
+    Rel(recepcionista, novios, "Notifica finalización", "ACLMessage (INFORM)")
 ```
 
 ## Infraestructura y Dependencias Externas

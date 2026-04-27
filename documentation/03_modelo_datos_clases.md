@@ -72,7 +72,7 @@ classDiagram
     Agent <|-- RecepcionistaAgent
     Agent <|-- FloristaAgent
     AchieveREInitiator <|-- PreguntarEstadoPedido
-    RecepcionistaAgent +-- PreguntarEstadoPedido : Contiene
+    RecepcionistaAgent *-- PreguntarEstadoPedido : Contiene
 
     NovioAgent ..> ServiceNames : usa
     RecepcionistaAgent ..> ServiceNames : usa

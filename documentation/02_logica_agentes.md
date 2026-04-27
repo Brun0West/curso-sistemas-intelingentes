@@ -99,7 +99,7 @@ flowchart TD
     D --> E[Crear ServiceDescription con type='recepcionista-service']
     E --> F[Añadir ServiceDescription a DFAgentDescription]
 
-    F --> G[Llamada a Herramienta Externa:<br> DFService.search(this, modelo)]
+    F --> G["Llamada a Herramienta Externa:<br> DFService.search(this, modelo)"]
 
     G --> H{¿Excepción FIPAException?}
     H -- Sí --> I[Capturar Error e Imprimir Traza]
