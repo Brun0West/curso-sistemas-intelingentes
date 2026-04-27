@@ -4,10 +4,10 @@
     <modelVersion>4.0.0</modelVersion>
 
     <groupId>edu.sma</groupId>
-    <artifactId>sma-jade-distribuido</artifactId>
+    <artifactId>sma-jade-floreria</artifactId>
     <version>1.0.0</version>
-    <name>SMA JADE Distribuido</name>
-    <description>Sistema multi-agente distribuido con JADE, Maven y Docker</description>
+    <name>SMA JADE Florería</name>
+    <description>Sistema multi-agente distribuido con JADE para gestión de pedidos de floristería</description>
 
     <properties>
         <maven.compiler.source>17</maven.compiler.source>
