@@ -10,7 +10,7 @@ import edu.sma.common.ServiceNames;
 import jade.core.behaviours.CyclicBehaviour;
 import jade.core.behaviours.TickerBehaviour;
 
-public class Novio extends Agent{
+public class NovioAgent extends Agent{
     int turno;
     String nombre;
     AID recepcionista;
@@ -20,53 +20,57 @@ public class Novio extends Agent{
         this.turno = args != null && args.length > 0 ? Integer.parseInt(args[0].toString()) : 1; 
         this.nombre = args != null && args.length > 1 ? String.valueOf(args[1]) : "Luis";
 
-        recepcionista = contactarRecepcionista();
-        if (recepcionista == null) {
-            System.err.println("No se pudo encontrar al recepcionista. El agente terminará.");
-            doDelete();
-            return;
-        }
-        
-        // Ignora: String remoteMtp = args != null && args.length > 2 ? String.valueOf(args[2]) : "http://p1-main:7778/acc";  para cuando se implemente MTP
-
-        // Preguntar cada 1000*(turno+5) ms por pedido
-        addBehaviour(new TickerBehaviour(this, (turno+5)*1000) {
-            protected void onTick() { // Duda: que otros metodos existen ademas de on tick sobretodo hablame de los que contempla cyclic behaviour
-                 ACLMessage query = new ACLMessage(ACLMessage.QUERY_IF); // DUDA: cuando importaba "import jade.domain.introspection.ACLMessage" en lugar de "import jade.lang.acl.ACLMessage" tenia error, explicame la diferencia entre ambos archivos
-                //Definimos el protocolo del tipo de consulta, esto ayuda a filtrar mejor los mensajes
-                query.setProtocol("consultar-pedido");
-                if(recepcionista !=null){
-                    query.addReceiver(recepcionista); 
-                } else{
-                    System.out.println("Ha ocurrido un error");
-                }
-                String msj = "pedido turno-" + turno + "-de-" + nombre + "-esta listo?";
-
-                query.setContent(msj);
-                myAgent.send(query);
-            }
-        });
-
-        // Esperamos la respuesta
-        addBehaviour(new CyclicBehaviour() {
-            public void action() {
-                ACLMessage response = receive();
-                if (response == null) {
-                    block();
-                    return;
-                } 
-                if (response.getContent().contains("no esta listo")) {
-                    System.err.println("Entiendo, seguire esperando.");
-                }else{
-                    ACLMessage msg = new ACLMessage(ACLMessage.CONFIRM);
-                    msg.addReceiver(recepcionista);
-                    msg.setContent("Gracias, ya estoy yendo a recogerlo.");
-                    System.err.println("SISTEMA: Cliente" + nombre + "ha terminado su comunciación.");
-                    myAgent.doDelete();
+        // Reintentar hasta encontrar al recepcionista
+        addBehaviour(new TickerBehaviour(this, 1000) {
+            protected void onTick() {
+                recepcionista = contactarRecepcionista();
+                if (recepcionista != null) {
+                    stop();           // detener el ticker
+                    iniciarComportamientos();  // recién ahora añadir los behaviours reales
                 }
             }
         });
     }
+
+    private void iniciarComportamientos() {
+            // Preguntar cada 1000*(turno+5) ms por pedido
+            addBehaviour(new TickerBehaviour(this, (turno+5)*1000) {
+                protected void onTick() { // Duda: que otros metodos existen ademas de on tick sobretodo hablame de los que contempla cyclic behaviour
+                    ACLMessage query = new ACLMessage(ACLMessage.QUERY_IF); // DUDA: cuando importaba "import jade.domain.introspection.ACLMessage" en lugar de "import jade.lang.acl.ACLMessage" tenia error, explicame la diferencia entre ambos archivos
+                    //Definimos el protocolo del tipo de consulta, esto ayuda a filtrar mejor los mensajes
+                    query.setProtocol("consultar-pedido");
+                    if(recepcionista !=null){
+                        query.addReceiver(recepcionista); 
+                    } else{
+                        System.out.println("Ha ocurrido un error");
+                    }
+                    String msj = "pedido turno-" + turno + "-de-" + nombre + "-esta listo?";
+
+                    query.setContent(msj);
+                    myAgent.send(query);
+                }
+            });
+
+            // Esperamos la respuesta
+            addBehaviour(new CyclicBehaviour() {
+                public void action() {
+                    ACLMessage response = receive();
+                    if (response == null) {
+                        block();
+                        return;
+                    } 
+                    if (response.getContent().contains("no esta listo")) {
+                        System.err.println("Entiendo, seguire esperando.");
+                    }else{
+                        ACLMessage msg = new ACLMessage(ACLMessage.CONFIRM);
+                        msg.addReceiver(recepcionista);
+                        msg.setContent("Gracias, ya estoy yendo a recogerlo.");
+                        System.err.println("SISTEMA: Cliente" + nombre + "ha terminado su comunciación.");
+                        myAgent.doDelete();
+                    }
+                }
+            });
+        }
 
     private AID contactarRecepcionista(){ // por que devuelvo un AID en lugar de un string?
         DFAgentDescription modelo = new DFAgentDescription();

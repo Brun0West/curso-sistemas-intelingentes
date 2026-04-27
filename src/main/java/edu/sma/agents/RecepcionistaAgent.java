@@ -68,7 +68,7 @@ public class RecepcionistaAgent extends Agent{
             public void action() {
                 MessageTemplate mt = MessageTemplate.and(
                     MessageTemplate.MatchPerformative(ACLMessage.INFORM),
-                    MessageTemplate.MatchContent("Pedido listo para orden *")
+                    MessageTemplate.MatchSender(new AID("floristaAgent", AID.ISLOCALNAME))
                 );
                 ACLMessage msg = myAgent.receive(mt);
                 if (msg == null) {

@@ -80,7 +80,7 @@ public class FloristaAgent extends Agent{
             private void producirArreglo() {
                 int ordenActual = siguienteOrdenPorAtender;
                 System.out.println(myAgent.getLocalName() + " >> Comenzando trabajo en orden " + ordenActual + 
-                        " (tiempo: " + getTickCount() + "ms)");
+                        " (tick #: " + getTickCount()+")");
 
                 // Para mantener el sistema reactivo, el trabajo se simula en el tick
                 System.out.println(myAgent.getLocalName() + " >> Orden " + ordenActual + " completada");
