@@ -1,47 +1,27 @@
 package edu.sma.agents;
 
-import edu.sma.common.DfUtils;
-import edu.sma.common.ServiceNames;
+import java.util.concurrent.ThreadLocalRandom;
+
 import jade.core.AID;
 import jade.core.Agent;
 import jade.core.behaviours.CyclicBehaviour;
 import jade.core.behaviours.TickerBehaviour;
-import jade.domain.FIPAAgentManagement.DFAgentDescription;
 import jade.lang.acl.ACLMessage;
 import jade.lang.acl.MessageTemplate;
 
-import java.util.Optional;
-import java.util.concurrent.ThreadLocalRandom;
-
-public class FloristaAgent extends Agent {
-
+public class FloristaAgent extends Agent{
+    
     private static final int TIEMPO_TRABAJO_MIN = 10000; // 10 segundos
     private static final int TIEMPO_TRABAJO_MAX = 15000; // 15 segundos
     private static final int MAX_ORDENES = 3;
+    private Integer siguienteOrdenPorAtender = 1;
 
-    private int siguienteOrdenPorAtender = 1;
-    private AID recepcionistaAid = null;
+    protected void setup(){
 
-    @Override
-    protected void setup() {
-        System.out.println(getLocalName() + " iniciado");
-
-        // Registrar en DF
-        DfUtils.registerService(this, ServiceNames.FLORISTA_SERVICE, getLocalName() + "-florista-service");
-
-        // Buscar al recepcionista en el DF
-        Optional<DFAgentDescription> recepcionistaOpt = DfUtils.searchFirst(this, ServiceNames.RECEPCIONISTA_SERVICE);
-        if (recepcionistaOpt.isPresent()) {
-            recepcionistaAid = recepcionistaOpt.get().getName();
-            System.out.println(getLocalName() + " >> Recepcionista encontrado: " + recepcionistaAid.getName());
-        } else {
-            System.err.println(getLocalName() + " >> ERROR: Recepcionista no encontrado en DF");
-        }
-
-        // CyclicBehaviour para atender REQUEST del recepcionista
+        // Atendemos las consultas REQUEST del recepcionista
         addBehaviour(new CyclicBehaviour(this) {
             @Override
-            public void action() {
+            public void action(){
                 ACLMessage msg = receive(MessageTemplate.MatchPerformative(ACLMessage.REQUEST));
                 if (msg == null) {
                     block();
@@ -51,13 +31,12 @@ public class FloristaAgent extends Agent {
                 String content = msg.getContent();
                 System.out.println(getLocalName() + " >> Recibido REQUEST: '" + content + "'");
 
-                // Extraer orden del contenido (ej. "estaListo? orden=1")
-                int orden = extraerOrden(content);
-                if (orden < 0) {
+                int orden = obtenerOrden(content);
+                if (orden<0){
                     System.err.println(getLocalName() + " >> ERROR: No se pudo extraer la orden del contenido");
                     return;
                 }
-
+                
                 responderAlRecepcionista(msg, orden);
             }
 
@@ -79,27 +58,15 @@ public class FloristaAgent extends Agent {
 
                 myAgent.send(reply);
             }
-
-            private int extraerOrden(String content) {
-                try {
-                    int index = content.indexOf("orden=");
-                    if (index >= 0) {
-                        String numStr = content.substring(index + 6).split("[ ,;]")[0];
-                        return Integer.parseInt(numStr);
-                    }
-                } catch (NumberFormatException e) {
-                    System.err.println(getLocalName() + " >> ERROR al parsear orden: " + e.getMessage());
-                }
-                return -1;
-            }
+            
         });
 
-        // TickerBehaviour para la producción autónoma
+        // Con ticket simulo tiempo de trabajo por arreglo
         long tiempoInicial = ThreadLocalRandom.current().nextLong(TIEMPO_TRABAJO_MIN, TIEMPO_TRABAJO_MAX + 1);
         addBehaviour(new TickerBehaviour(this, tiempoInicial) {
             @Override
             protected void onTick() {
-                if (((FloristaAgent) myAgent).siguienteOrdenPorAtender <= MAX_ORDENES) {
+                if (siguienteOrdenPorAtender <= MAX_ORDENES) {
                     producirArreglo();
                     // Ajustar el siguiente intervalo aleatorio
                     long siguienteTiempo = ThreadLocalRandom.current().nextLong(TIEMPO_TRABAJO_MIN, TIEMPO_TRABAJO_MAX + 1);
@@ -111,11 +78,10 @@ public class FloristaAgent extends Agent {
             }
 
             private void producirArreglo() {
-                int ordenActual = ((FloristaAgent) myAgent).siguienteOrdenPorAtender;
+                int ordenActual = siguienteOrdenPorAtender;
                 System.out.println(myAgent.getLocalName() + " >> Comenzando trabajo en orden " + ordenActual + 
                         " (tiempo: " + getTickCount() + "ms)");
 
-                // Simular el trabajo (en un escenario real, sería asincrónico)
                 // Para mantener el sistema reactivo, el trabajo se simula en el tick
                 System.out.println(myAgent.getLocalName() + " >> Orden " + ordenActual + " completada");
 
@@ -123,27 +89,30 @@ public class FloristaAgent extends Agent {
                 notificarRecepcionista(ordenActual);
 
                 // Incrementar el contador
-                ((FloristaAgent) myAgent).siguienteOrdenPorAtender++;
+                siguienteOrdenPorAtender++;
             }
 
             private void notificarRecepcionista(int orden) {
-                if (((FloristaAgent) myAgent).recepcionistaAid != null) {
-                    ACLMessage inform = new ACLMessage(ACLMessage.INFORM);
-                    inform.addReceiver(((FloristaAgent) myAgent).recepcionistaAid);
-                    inform.setContent("Pedido listo para orden " + orden);
-                    inform.setOntology("FLORERIA");
-                    System.out.println(myAgent.getLocalName() + " >> Enviando INFORM al recepcionista: " +
-                            "'Pedido listo para orden " + orden + "'");
-                    myAgent.send(inform);
-                } else {
-                    System.err.println(myAgent.getLocalName() + " >> ERROR: No hay recepcionista para notificar");
-                }
+                ACLMessage inform = new ACLMessage(ACLMessage.INFORM);
+                inform.addReceiver(new AID("recepcionistaAgent", AID.ISLOCALNAME));
+                inform.setContent("Pedido listo para orden " + orden);
+                System.out.println(myAgent.getLocalName() + " >> Enviando INFORM al recepcionista: " +
+                        "'Pedido listo para orden " + orden + "'");
+                myAgent.send(inform);
             }
         });
     }
 
-    @Override
-    protected void takeDown() {
-        System.out.println(getLocalName() + " >> Agente finalizado. Órdenes completadas: " + (siguienteOrdenPorAtender - 1));
+    public int obtenerOrden(String mensaje){
+        String[] partes = mensaje.split("-");
+        int numero_orden = -1;
+        try{
+            numero_orden = Integer.parseInt(partes[1]);
+        }catch (NumberFormatException e) {
+            System.out.println("No es un #orden valido");
+        }
+        
+        return numero_orden;
     }
+
 }
