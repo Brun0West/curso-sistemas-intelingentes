@@ -93,28 +93,28 @@ En este sistema, la principal "herramienta" que utilizan los agentes es el servi
 
 ```mermaid
 flowchart TD
-    A[Inicio: NovioAgent necesita contactar al Recepcionista] --> B{¿Recepcionista AID es null?}
-    B -- Sí --> C[Preparar Plantilla de Búsqueda]
-    C --> D[Crear DFAgentDescription]
-    D --> E[Crear ServiceDescription con type='recepcionista-service']
-    E --> F[Añadir ServiceDescription a DFAgentDescription]
+    A["Inicio: NovioAgent necesita contactar al Recepcionista"] --> B{"¿Recepcionista AID es null?"}
+    B -- Sí --> C["Preparar Plantilla de Búsqueda"]
+    C --> D["Crear DFAgentDescription"]
+    D --> E["Crear ServiceDescription con type='recepcionista-service'"]
+    E --> F["Añadir ServiceDescription a DFAgentDescription"]
 
     F --> G["Llamada a Herramienta Externa:<br> DFService.search(this, modelo)"]
 
-    G --> H{¿Excepción FIPAException?}
-    H -- Sí --> I[Capturar Error e Imprimir Traza]
-    I --> J[Retornar null]
+    G --> H{"¿Excepción FIPAException?"}
+    H -- Sí --> I["Capturar Error e Imprimir Traza"]
+    I --> J["Retornar null"]
 
-    H -- No --> K{¿Resultados > 0?}
-    K -- No --> L[Retornar null]
-    K -- Sí --> M[Extraer AID del primer resultado:<br> results[0].getName()]
+    H -- No --> K{"¿Resultados > 0?"}
+    K -- No --> L["Retornar null"]
+    K -- Sí --> M["Extraer AID del primer resultado:<br> results[0].getName()"]
 
-    M --> N[Actualizar Estado Interno:<br> recepcionista = AID]
-    N --> O[Detener TickerBehaviour de búsqueda]
-    O --> P[Iniciar Comportamientos Principales de Comunicación]
+    M --> N["Actualizar Estado Interno:<br> recepcionista = AID"]
+    N --> O["Detener TickerBehaviour de búsqueda"]
+    O --> P["Iniciar Comportamientos Principales de Comunicación"]
 
     B -- No --> P
-    L --> Q[Esperar próximo Tick para reintentar]
+    L --> Q["Esperar próximo Tick para reintentar"]
     J --> Q
     Q --> A
 ```

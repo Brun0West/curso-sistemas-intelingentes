@@ -20,20 +20,20 @@ flowchart TD
 
     G --> H["Instanciar Comportamiento Dinámico:<br>PreguntarEstadoPedido (AchieveREInitiator)"]
     H --> I["Crear mensaje REQUEST al Florista:<br>pedido-{orden}- esta listo?"]
-    I --> J[Enviar REQUEST y Esperar Respuesta (Async)]
+    I --> J["Enviar REQUEST y Esperar Respuesta (Async)"]
 
-    J --> K{¿Tipo de respuesta del Florista?}
+    J --> K{"¿Tipo de respuesta del Florista?"}
 
-    K -- INFORM (Contenido "SI") --> L[handleInform()]
-    L --> M[Crear respuesta INFORM al Cliente]
-    M --> N[Contenido: "{Nombre}, su pedido ya esta listo"]
-    N --> O[Enviar Mensaje al Novio]
-    O --> Z[Fin de este hilo de razonamiento]
+    K -- INFORM (Contenido 'SI') --> L["handleInform()"]
+    L --> M["Crear respuesta INFORM al Cliente"]
+    M --> N["Contenido: '{Nombre}, su pedido ya esta listo'"]
+    N --> O["Enviar Mensaje al Novio"]
+    O --> Z["Fin de este hilo de razonamiento"]
 
-    K -- REFUSE (Contenido "NO") --> P[handleRefuse()]
-    P --> Q[Crear respuesta INFORM al Cliente]
-    Q --> R[Contenido: "El pedido todavia no esta listo"]
-    R --> S[Enviar Mensaje al Novio]
+    K -- REFUSE (Contenido 'NO') --> P["handleRefuse()"]
+    P --> Q["Crear respuesta INFORM al Cliente"]
+    Q --> R["Contenido: 'El pedido todavia no esta listo'"]
+    R --> S["Enviar Mensaje al Novio"]
     S --> Z
 ```
 
@@ -67,7 +67,7 @@ flowchart TD
     L --> M["Incrementar: siguienteOrdenPorAtender++"]
 
     M --> N["Generar nuevo intervalo aleatorio:<br>10s a 15s"]
-    N --> O[Reiniciar Ticker (reset) con nuevo intervalo]
+    N --> O["Reiniciar Ticker (reset) con nuevo intervalo"]
     O --> E
 ```
 
